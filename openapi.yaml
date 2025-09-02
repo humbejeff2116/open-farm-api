@@ -1,0 +1,392 @@
+openapi: 3.1.0
+info:
+  title: Open Farm API
+  description: REST API for managing farmers, agents, and invite codes with RBAC.
+  version: 0.1.0
+
+servers:
+  - url: http://localhost:4000
+    description: Local development
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Farmer:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        agentId: { type: string, nullable: true }
+        name: { type: string }
+        phone: { type: string }
+        location: { type: string }
+        createdAt: { type: string, format: date-time }
+        deletedAt: { type: string, format: date-time, nullable: true }
+    Agent:
+      type: object
+      properties:
+        id: { type: string }
+        userId: { type: string }
+        name: { type: string }
+        teamName: { type: string }
+        active: { type: boolean }
+    InviteCode:
+      type: object
+      properties:
+        id: { type: string }
+        code: { type: string }
+        role: { type: string, enum: [admin, agent, farmer] }
+        teamName: { type: string, nullable: true }
+        maxUses: { type: integer }
+        uses: { type: integer }
+        active: { type: boolean }
+        expiresAt: { type: string, format: date-time, nullable: true }
+    ReportFilterPreset:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "preset_123"
+        name:
+          type: string
+          example: "Open Disease"
+        filters:
+          type: object
+          example: { status: "open", type: "disease" }
+        userId:
+          type: string
+          example: "user_123"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: Service is up
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+
+  /farmers:
+    get:
+      summary: List farmers
+      description: Returns farmers, filtered by RBAC (farmer → self, agent → assigned, admin → all).
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer }
+        - name: pageSize
+          in: query
+          schema: { type: integer }
+        - name: q
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Farmers
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Farmer" }
+
+  /farmers/{id}:
+    get:
+      summary: Get farmer by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Farmer
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Farmer" }
+        "404": { description: Not found }
+    patch:
+      summary: Update farmer (admin/agent)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                phone: { type: string }
+                location: { type: string }
+      responses:
+        "200": { description: Updated }
+        "404": { description: Not found }
+    delete:
+      summary: Soft delete farmer (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Deleted }
+        "404": { description: Not found }
+
+  /agents:
+    get:
+      summary: List agents (admin only)
+      responses:
+        "200":
+          description: Agents
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Agent" }
+
+  /agents/{id}:
+    get:
+      summary: Get agent by ID (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Agent, content: { application/json: { schema: { $ref: "#/components/schemas/Agent" } } } }
+        "404": { description: Not found }
+    patch:
+      summary: Update agent (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                teamName: { type: string }
+                active: { type: boolean }
+      responses:
+        "200": { description: Updated }
+        "404": { description: Not found }
+
+  /invite-codes:
+    get:
+      summary: List invite codes (admin only)
+      parameters:
+        - name: role
+          in: query
+          schema: { type: string }
+        - name: teamName
+          in: query
+          schema: { type: string }
+        - name: active
+          in: query
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Invite codes
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/InviteCode" }
+    post:
+      summary: Create invite code (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role: { type: string, enum: [admin, agent, farmer] }
+                teamName: { type: string }
+                maxUses: { type: integer }
+                expiresAt: { type: string, format: date-time }
+                active: { type: boolean }
+                code: { type: string }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/InviteCode" } } } }
+
+  /invite-codes/{id}:
+    get:
+      summary: Get invite code by ID (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: InviteCode, content: { application/json: { schema: { $ref: "#/components/schemas/InviteCode" } } } }
+        "404": { description: Not found }
+    patch:
+      summary: Update invite code (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                teamName: { type: string }
+                maxUses: { type: integer }
+                expiresAt: { type: string, format: date-time, nullable: true }
+                active: { type: boolean }
+      responses:
+        "200": { description: Updated }
+        "404": { description: Not found }
+
+  /reports/farmers:
+    get:
+      summary: Farmer report (per agent, date range)
+      parameters:
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        "200":
+          description: Aggregated counts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    agentId: { type: string }
+                    agentName: { type: string }
+                    total: { type: integer }
+
+
+                    paths:
+  /reports/analytics:
+    get:
+      summary: Get report analytics
+      description: Returns aggregated analytics data for reports including counts grouped by type, status, and weekly trends.
+      tags:
+        - Reports
+      responses:
+        "200":
+          description: Analytics successfully retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  byType:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type: { type: string, example: "disease" }
+                        count: { type: integer, example: 5 }
+                  byStatus:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        status: { type: string, example: "open" }
+                        count: { type: integer, example: 3 }
+                  trends:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        week: { type: string, example: "2025-08-01" }
+                        count: { type: integer, example: 7 }
+
+  /report-filters:
+    get:
+      summary: List report filter presets
+      description: Returns all saved filter presets for the authenticated user.
+      tags:
+        - Reports
+      responses:
+        "200":
+          description: List of presets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReportFilterPreset"
+
+    post:
+      summary: Save a new filter preset
+      description: Creates a new saved filter preset for the authenticated user.
+      tags:
+        - Reports
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "Open Disease"
+                filters:
+                  type: object
+                  example: { status: "open", type: "disease" }
+      responses:
+        "200":
+          description: Preset created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportFilterPreset"
+
+  /report-filters/{id}:
+    delete:
+      summary: Delete a filter preset
+      description: Deletes a saved report filter preset by ID.
+      tags:
+        - Reports
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: The preset ID
+      responses:
+        "200":
+          description: Preset successfully deleted
