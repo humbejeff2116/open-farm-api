@@ -1,6 +1,6 @@
 import { Router } from "express";
-import agentController from "../controllers/index.js";
 import { requireRole } from "../../../middlewares/auth/index.js";
+import agentController from "../controllers/agent.controllers.js";
 const agentRouter = Router();
 
 

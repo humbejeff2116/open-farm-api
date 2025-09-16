@@ -1,6 +1,9 @@
 import type { NextFunction, Request, Response } from 'express';
 import { z } from "zod";
-import agentService from '../services/index.js';
+import { container } from 'tsyringe';
+import { AgentService } from '../services/agent.services.js';
+
+const agentService = container.resolve(AgentService);
 
 const roleSchema = z.enum(["agent", "supervisor", "admin"]);
 
@@ -17,7 +20,7 @@ const updateAgentSchema = z.object({
     active: z.boolean().optional(),
 });
 
-class Controller {
+class AgentController {
     async registerAgent(req:Request, res: Response, next: NextFunction) {
         /* -----------------  Agents  ----------------- */
 
@@ -206,5 +209,5 @@ class Controller {
     }
 }
 
-const agentController = new Controller();
+const agentController = new AgentController();
 export default agentController;
