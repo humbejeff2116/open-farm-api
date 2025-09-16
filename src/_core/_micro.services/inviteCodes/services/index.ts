@@ -1,13 +1,51 @@
 import crypto from "node:crypto";
 import { eq, sql, desc, and, SQL } from "drizzle-orm";
 import { nanoid } from "nanoid";
-import { db } from "../../../database/index.js";
-import { inviteCodes } from "../../../database/drizzle/migrations/schema/inviteCodes.js";
-import { parsePagination } from "../../../utils/index.js";
+import { inviteCodes } from "../../../database/drizzle/migrations/schema/inviteCodes.schema.js";
+import { parsePagination } from "../../../utils/req.utils.js";
+import { injectable, singleton, container, inject } from 'tsyringe';
+import type { IInviteService } from "../../../common/interfaces/invite.interface.js";
+import type { IUserService } from "../../../common/interfaces/user.interface.js";
+import { db } from "../../../database/index.database.js";
 
 
-class Service {
-    async createInviteCode(body: any, req: any) {
+
+@singleton()
+@injectable()
+export class InviteService implements IInviteService {
+    constructor(@inject('IUserService') private userService: IUserService) {}
+
+    public async validateInviteCode(code: string) {
+        console.log(`[Invites Service] Validating invite code: ${code}`);
+
+        const inviteCode = await this.getInviteCodeByCode(code);
+
+        if (inviteCode) {
+            console.log(`[Invites Service] Code '${code}' is valid.`);
+        } else {
+            console.log(`[Invites Service] Code '${code}' is invalid.`);
+        }
+
+        return inviteCode;
+    }
+
+
+    public async getInviteDetails(code: string) {
+        const isValid = await this.validateInviteCode(code);
+        if (!isValid) {
+            return { code, users: [] };
+        }
+
+        // Synchronous call to the user service
+        const users = await this.userService.getByInviteCode(code);
+        return { code, users };
+    }
+
+
+
+
+
+    public async createInviteCode(body: any, req: any) {
         const code = body.code ?? (body.prefix ? body.prefix.toUpperCase() + "-" : "") + crypto.randomBytes(6).toString("base64url"); // URL-safe
         // const code = (body.prefix ? body.prefix.toUpperCase() + "-" : "") + nanoid(8).toUpperCase();
         const payload = {
@@ -30,7 +68,7 @@ class Service {
         return {success: true, code: invite.code, id: invite.id };
     }
 
-    async getInviteCodes(query: any) {
+    public async getInviteCodes(query: any) {
         const { limit, offset } = parsePagination(query);
         const { role, teamName, active } = query as { role?: string; teamName?: string; active?: string };
         let where: SQL<unknown> | undefined = sql<string>`true`;
@@ -47,13 +85,13 @@ class Service {
         return rows;
     }
 
-    async getInviteCodeById(id: string) {
+    public async getInviteCodeById(id: string) {
         const row = await db.query.inviteCodes
         .findFirst({ where: (invtCode: Record<string, any>, { eq }:{ eq: any }) => eq(invtCode.id, id) });
         return row || null;
     }
 
-    async updateInviteCode(id: string, updates: any) {
+    public async updateInviteCode(id: string, updates: any) {
         // Normalize date fields
         const normalized: any = { ...updates }
         
@@ -68,7 +106,7 @@ class Service {
 
     }
 
-    async revokeInviteCode(code: string) {
+    public async revokeInviteCode(code: string) {
         const [invite] = await db.update(inviteCodes).set({ revoked: true }).where(eq(inviteCodes.code, code)).returning();
         return invite;
     }
@@ -95,32 +133,33 @@ class Service {
 
 
 
-    async getRevokedInviteCodes() {
+    public async getRevokedInviteCodes() {
         const codes = await db.select().from(inviteCodes)
         .where(eq(inviteCodes.revoked, true))
         .orderBy(desc(inviteCodes.createdAt));
         return codes;   
     }
 
-    async getAllInviteCodes() {
+    public async getAllInviteCodes() {
         const codes = await db.select().from(inviteCodes)
         .orderBy(desc(inviteCodes.createdAt));
         return codes;
     }
 
-    async getInviteCodeByCode(code: string) {
+    public async getInviteCodeByCode(code: string) {
         const [invite] = await db.select().from(inviteCodes)
         .where(eq(inviteCodes.code, code)).limit(1);
+
         return invite || null;
     }
 
 
-    async deleteInviteCode(id: string) {
+    public async deleteInviteCode(id: string) {
         await db.delete(inviteCodes).where(eq(inviteCodes.id, id));
         return { success: true, message: "Invite code deleted" };
     }
 
-    async purgeOldInviteCodes(days: number) {
+    public async purgeOldInviteCodes(days: number) {
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - days);
 
@@ -132,58 +171,58 @@ class Service {
         return { success: true, deletedCount };
     } 
     
-    async inviteCodeExists(code: string) {
+    public async inviteCodeExists(code: string) {
         const [invite] = await db.select().from(inviteCodes)
         .where(eq(inviteCodes.code, code)).limit(1);
         return !!invite;    
     }
 
-    async getTotalInviteCodesCount() {
+    public async getTotalInviteCodesCount() {
         const [{ count }] = await db.select({ count: sql`COUNT(*)` })
         .from(inviteCodes);
         return Number(count) || 0;
     }
 
-    async getActiveInviteCodesCount() {
+    public async getActiveInviteCodesCount() {
         const [{ count }] = await db.select({ count: sql`COUNT(*)` })
         .from(inviteCodes).where(eq(inviteCodes.revoked, false));
         return Number(count) || 0;
     }
 
-    async getUsedInviteCodesCount() {
+    public async getUsedInviteCodesCount() {
         const [{ count }] = await db.select({ count: sql`COUNT(*)` })
         .from(inviteCodes).where(sql`${inviteCodes.uses} > 0`);
         return Number(count) || 0;
     }
 
-    async getRevokedInviteCodesCount() {
+    public async getRevokedInviteCodesCount() {
         const [{ count }] = await db.select({ count: sql`COUNT(*)` })
         .from(inviteCodes).where(eq(inviteCodes.revoked, true));
         return Number(count) || 0;
     }
 
-    async getInviteCodesByRole(role: "farmer" | "agent" | "supervisor" | "admin") {
+    public async getInviteCodesByRole(role: "farmer" | "agent" | "supervisor" | "admin") {
         const codes = await db.select().from(inviteCodes)
         .where(eq(inviteCodes.role, role ))
         .orderBy(desc(inviteCodes.createdAt));
         return codes;
     }
 
-    async getInviteCodesByTeamName(teamName: string) {
+    public async getInviteCodesByTeamName(teamName: string) {
         const codes = await db.select().from(inviteCodes)
         .where(eq(inviteCodes.teamName, teamName))
         .orderBy(desc(inviteCodes.createdAt));
         return codes;
     }
 
-    async getInviteCodesByCreator(adminId: string) {
+    public async getInviteCodesByCreator(adminId: string) {
         const codes = await db.select().from(inviteCodes)
         .where(eq(inviteCodes.createdBy, adminId))
         .orderBy(desc(inviteCodes.createdAt));
         return codes;
     }
 
-    async getExpiredInviteCodes(daysValid: number) {
+    public async getExpiredInviteCodes(daysValid: number) {
         const cutoffDate = new Date();
         cutoffDate.setDate(cutoffDate.getDate() - daysValid);
 
@@ -195,6 +234,3 @@ class Service {
         return codes;
     }
 }
-
-const adminService = new Service();
-export default adminService;
