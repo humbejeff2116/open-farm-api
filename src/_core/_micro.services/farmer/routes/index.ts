@@ -1,6 +1,6 @@
 import { Router } from "express";
-import farmerController from "../controllers/index.js";
 import { requireRole } from "../../../middlewares/auth/index.js";
+import farmerController from "../controllers/farmer.controllers.js";
 const farmerRouter = Router();
 
 
