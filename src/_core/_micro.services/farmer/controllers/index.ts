@@ -1,10 +1,13 @@
 import type { NextFunction, Request, Response } from 'express';
+import { container } from 'tsyringe';
 import { z } from "zod";
-import farmerService from '../services/index.js';
+import { FarmerService } from '../services/index.js';
+
+// Resolve the singleton instance of
+const farmerService = container.resolve(FarmerService);
 
 class Controller {
     async registerFarmer(req:Request, res: Response) {
-        /* -----------------  Farmers  ----------------- */
         let data;
         
         try {
