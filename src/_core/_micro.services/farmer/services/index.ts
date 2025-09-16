@@ -1,17 +1,28 @@
 import { and, asc, desc, eq, isNull, like, SQL, sql } from "drizzle-orm";
-import { db } from "../../../database/index.js";
-import { farmers } from "../../../database/drizzle/migrations/schema/farmers.js";
-import { getSortQuery, parsePagination } from "../../../utils/index.js";
+import { farmers } from "../../../database/drizzle/migrations/schema/farmers.schema.js";
+import { getSortQuery, parsePagination } from "../../../utils/req.utils.js";
 import type { Request } from "express";
+import type { IFarmerService } from "../../../common/interfaces/farmer.interface.js";
+import { inject, injectable, singleton } from "tsyringe";
+import type { IUserService } from "../../../common/interfaces/user.interface.js";
+import type { IReportService } from "../../../common/interfaces/reports.interface.js";
+import { db } from "../../../database/index.database.js";
 
 type SortDirection = "asc" | "desc";
 interface FarmerQueryOptions {
-  page?: number;
-  pageSize?: number;
-  sort?: string; // e.g. "name:asc"
+    page?: number;
+    pageSize?: number;
+    sort?: string; // e.g. "name:asc"
 }
 
-class Service {
+@singleton()
+@injectable()
+export class FarmerService implements IFarmerService {
+    constructor(
+        @inject('IUserService') private userService: IUserService,
+        @inject('IReportService') private reportService: IReportService
+    ) {}
+
     async registerFarmer(data: any) {
         // Logic to register a farmer
         const [farmer] = await db.insert(farmers).values(data).returning();
@@ -20,9 +31,13 @@ class Service {
 
     async farmerExists(name: string) {
         const farmer = await db.select().from(farmers)
-        .where(eq(farmers.fullName, name)).
-        limit(1);
+        .where(eq(farmers.fullName, name))
+        .limit(1);
         return farmer.length > 0;
+    }
+
+    public async getFarmer(id: string): Promise<any> {
+        return {}
     }
 
     async getFarmerById(user: any, id: string) {
@@ -199,6 +214,3 @@ class Service {
     }
 
 }
-
-const farmerService = new Service();
-export default farmerService;
