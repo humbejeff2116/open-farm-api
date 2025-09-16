@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { container } from "tsyringe";
 import { z } from "zod";
-import { InviteService } from "../services/index.js";
+import { InviteService } from "../services/inviteCodes.service.js";
 
 const inviteCodesService = container.resolve(InviteService);
 
@@ -148,5 +148,5 @@ class Controller {
 
 }
 
-const adminController = new Controller();
-export default adminController;
+const invitCodesController = new Controller();
+export default invitCodesController;
