@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { z } from "zod";
 import { container } from 'tsyringe';
 import { AgentService } from '../services/agent.services.js';
+import { APIError, HttpStatusCode } from '../../../utils/error.utils.js';
 
 const agentService = container.resolve(AgentService);
 
@@ -29,7 +30,7 @@ class AgentController {
             const agentResp = await agentService.registerAgent(data); 
             return res.status(200).json(agentResp);  
         } catch (err) {
-            next(err);   
+            next(new APIError('Register Agent error', HttpStatusCode.INTERNAL_SERVER));  
         }
     }
 
@@ -46,8 +47,8 @@ class AgentController {
                 return res.status(404).json({ success: false, message: "Agent not found" });
             }   
             return res.status(200).json({ success: true, data: updatedAgent });
-        } catch (e) {
-            next(e);
+        } catch (err) {
+            next(new APIError('Update Agent error', HttpStatusCode.INTERNAL_SERVER));
         }
     }
 
@@ -64,7 +65,7 @@ class AgentController {
             }
             return res.status(200).json({ success: true, data: agent });
         } catch (err) {
-            next(err);
+                next(new APIError('Get Agent By Id error', HttpStatusCode.INTERNAL_SERVER));
         }
     }
 
@@ -73,7 +74,7 @@ class AgentController {
             const agents = await agentService.getAgents(req);
             return res.status(200).json({ success: true, data: agents });
         } catch (err) {
-           next(err);
+                next(new APIError('Get all agents error', HttpStatusCode.INTERNAL_SERVER));
         }   
     } 
 
@@ -83,7 +84,7 @@ class AgentController {
             const deleteResp = await agentService.deleteAgent(id);
             return res.status(200).json(deleteResp);
         } catch (err) {
-            next(err);  
+            next(new APIError('Delete agent error', HttpStatusCode.INTERNAL_SERVER)); 
         }
     }
 
@@ -93,7 +94,7 @@ class AgentController {
             const restoreResp = await agentService.restoreAgent(id);
             return res.status(200).json(restoreResp);
         } catch (err) {
-            next(err);  
+            next(new APIError('Restore agent error', HttpStatusCode.INTERNAL_SERVER));  
         }
     }
 
@@ -110,7 +111,10 @@ class AgentController {
             if (!user) {
                 return res.status(401).json({ success: false, message: "Unauthorized" });   
             }
-            const body = z.object({ role: roleSchema, reason: z.string().max(500).optional() }).parse(req.body);
+            const body = z.object({ 
+                role: roleSchema, 
+                reason: z.string().max(500).optional() 
+            }).parse(req.body);
             // Fetch agent to check current role
             const agent = await agentService.getAgentById(user, agentId);
             if (!agent) return res.status(404).json({ error: "Agent not found" });
@@ -129,7 +133,7 @@ class AgentController {
                 return res.status(200).json(asignRoleResp);
             }
         } catch (err) {
-            next(err);
+            next(new APIError('Assisgn role to agent error', HttpStatusCode.INTERNAL_SERVER));
         }
     }
 
@@ -142,7 +146,7 @@ class AgentController {
             
             const body = z.object({
                 changes: z.array(z.object({
-                    id: z.string().uuid(),
+                    id: z.uuid(),
                     role: roleSchema,
                     reason: z.string().max(500).optional(),
                 })).min(1),
@@ -154,8 +158,7 @@ class AgentController {
             const resp = await agentService.assignRolesToAgentsInBulk(body.changes, req);       
             return res.status(200).json(resp);
         } catch (err) { 
-            console.error(err);
-            return res.status(500).json({ success: false, message: "Server error" });
+            next(new APIError('Assign role to agent bulk error', HttpStatusCode.INTERNAL_SERVER));
         }   
     }
 
@@ -187,15 +190,14 @@ class AgentController {
             // Return all found agents
             return res.status(200).json({ success: true, data: agents });
         } catch (err) {
-            console.error(err);
-            return res.status(500).json({ success: false, message: "Server error" });
+            next(new APIError('Get bulk agents error', HttpStatusCode.INTERNAL_SERVER));
         }
     } 
     
     async getRoleAudits(req: Request, res: Response, next: NextFunction) {
         const query = z.object({
-            subjectId: z.string().uuid().optional(),
-            changedById: z.string().uuid().optional(),
+            subjectId: z.uuid().optional(),
+            changedById: z.uuid().optional(),
             limit: z.coerce.number().min(1).max(200).default(50),
         }).parse(req.query);
 
@@ -203,8 +205,7 @@ class AgentController {
             let rows = agentService.getRoleAudits(query);
             return res.json({ ok: true, audits: rows });
         } catch (err) {
-            console.error(err);
-            return res.status(500).json({ success: false, message: "Server error" });
+            next(new APIError('Get role audits error', HttpStatusCode.INTERNAL_SERVER));
         }
     }
 }
