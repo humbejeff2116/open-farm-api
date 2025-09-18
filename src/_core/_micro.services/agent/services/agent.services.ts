@@ -1,7 +1,4 @@
 import { and, eq, inArray, desc, sql, isNull } from "drizzle-orm";
-import { db } from "../../../database/index.js";
-import { agents } from "../../../database/drizzle/migrations/schema/agents.js";
-import { roleAudits } from "../../../database/drizzle/migrations/schema/roleAudits.js";
 import type { Request } from "express";
 import type { AppUser } from "../../../middlewares/auth/index.js";
 import type { IAgentService } from "../../../common/interfaces/agent.interface.js";
@@ -9,6 +6,9 @@ import { inject, injectable, singleton } from "tsyringe";
 import type { IUserService } from "../../../common/interfaces/user.interface.js";
 import type { IReportService } from "../../../common/interfaces/reports.interface.js";
 import { getSortQuery, parsePagination } from "../../../utils/req.utils.js";
+import { db } from "../../../database/index.database.js";
+import { agents } from "../../../database/drizzle/migrations/schema/agents.schema.js";
+import { roleAudits } from "../../../database/drizzle/migrations/schema/roleAudits.schema.js";
 
 
 @singleton()
