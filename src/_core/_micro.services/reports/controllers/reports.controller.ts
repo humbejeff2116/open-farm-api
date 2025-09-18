@@ -1,13 +1,12 @@
 import type { Request, Response, NextFunction } from "express";
-import { ReportService } from "../services/index.js";
 import { z } from "zod";
-import { tr } from "zod/locales";
 import { Parser as CsvParser } from "json2csv";
 import ExcelJS from "exceljs";
 import PDFDocument from "pdfkit";
 import { container } from "tsyringe";
 import reportsFilterService from "../services/reportsFilter.service.js";
 import reportAnalyticsService from "../services/reportsAnalytics.service.js";
+import { ReportService } from "../services/report.service.js";
 
 // Resolve the singleton instance of ReportService
 const reportService = container.resolve(ReportService);
@@ -30,7 +29,7 @@ const createFilterSchema = z.object({
     filters: z.record(z.string(), z.any()),
 })
 
-class Controller {
+class ReportsController {
     // async generateReport(req: Request, res: Response, next: NextFunction) {
     //     try {
     //         const { type } = req.params;
@@ -354,5 +353,5 @@ class Controller {
     }
 }
 
-const reportController = new Controller();
+const reportController = new ReportsController();
 export default reportController;
