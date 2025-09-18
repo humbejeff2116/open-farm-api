@@ -1,29 +1,27 @@
-import { Types } from "mongoose";
 
-type ObjectIdOrString = Types.ObjectId | string;
 
 // wallet
 export interface AccountWallet {
-    _id?: ObjectIdOrString
-    accountId: ObjectIdOrString
-    amount?: number
+    id?: string
+    accountId: string
+    balance?: number
     // transactions?: Array<Transaction>
     createdAt?: Date
 }
 
 export interface WalletTransaction {
-    walletId: Types.ObjectId | string,
-    accountId: Types.ObjectId | string,
-    amount: number, 
+    walletId: string,
+    accountId: string,
+    balance: number, 
 }
 
 
 // transaction
 export interface AccountTransaction {
-    _id?: ObjectIdOrString
-    accountId: ObjectIdOrString
-    walletId?: ObjectIdOrString
-    recieverWalletId?: ObjectIdOrString
+    _d?: string
+    accountId: string
+    walletId?: string
+    recieverWalletId?: string
     amount: number
     timeStamp: string
     reason: string
