@@ -1,16 +1,16 @@
-import type { Request, Response } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { z } from "zod";
-import rabbitMQStreamSender from '../../../messageQueue/streams/sender/index.js';
 import { container } from 'tsyringe';
-import { UserService } from '../services/index.js';
+import rabbitMQStreamSender from '../../../messageQueue/streams/sender/index.js';
 import { messageStreamTypes } from '../../../common/types/messageQueue.types.js';
+import { UserService } from '../services/user.service.js';
 
 
 // Resolve the singleton instance of InviteService
 const userService = container.resolve(UserService);
 export class UserController {
 
-    async signUp(req: Request, res: Response) {
+    async signUp(req: Request, res: Response, next: NextFunction) {
         try {
             // TODO... get the session id from the request header
             const sessionId = req.sessionID;
@@ -81,5 +81,49 @@ export class UserController {
             }
             return res.status(500).send({ message: 'An unexpected error occurred.' });
         }
-    }   
+    } 
+    
+    userSignupSuccessfull(req: Request, res: Response, next: NextFunction) {
+        const { id: userId, inviteCode } = req.params;
+
+        if (!userId) {
+            return res.status(403).json({message: 'Un Authorized'});
+        }
+
+        try {
+            // send account created message to message stream
+            rabbitMQStreamSender()
+            .then(({sendMessage}) => {
+                sendMessage({
+                    type:  messageStreamTypes.accountCreated,
+                    message: {
+                        userId: userId,
+                        inviteCode: inviteCode,
+                    }
+                })
+            })
+           .then(() => {
+                console.log('account created message sent to RabbitMQ stream')
+            }).catch((err) => {
+                console.error('Error sending account created message to RabbitMQ stream', err)
+            })
+
+            // Emit an account sign up event here to all connected clients
+            ;(global as any).io?.emit(`account:created`, {
+                message: 'Account created succesfully',
+                success: true,
+            })
+
+            return res.status(200).json({
+                success: true,
+                data: null 
+            })
+        } catch (err) {
+            next(err);   
+        }
+    }
 }
+
+
+const userController = new UserController();
+export default userController;
