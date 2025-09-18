@@ -1,7 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Request, Response, NextFunction } from "express";
 import { userPermission, UserPermissions } from "../data/roles.js";
-import { APIError, HttpStatusCode } from "../../lib/logs/errorHandler.js";
+import { APIError, HttpStatusCode } from "../../utils/error.utils.js";
+
 
 
 
