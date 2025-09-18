@@ -5,7 +5,8 @@ import {
     text, 
     timestamp, 
 } from "drizzle-orm/pg-core";
-import { userRoleEnum } from "./users.js";
+import { userRoleEnum } from "./profiles.schema.js";
+
 
 
 export const roleAudits = pgTable("role_audits", {

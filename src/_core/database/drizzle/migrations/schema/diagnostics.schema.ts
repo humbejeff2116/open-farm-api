@@ -5,8 +5,8 @@ import {
     timestamp, 
     jsonb,  
 } from "drizzle-orm/pg-core";
-import { farmers } from "./farmers.js";
-import { agents } from "./agents.js";
+import { farmers } from "./farmers.schema.js";
+import { agents } from "./agents.schema.js";
 
 
 

@@ -5,9 +5,11 @@ import {
     boolean, 
     varchar,
 } from "drizzle-orm/pg-core";
-import { userRoleEnum } from "./users.js";
-import { agents } from "./agents.js";
-import { email } from "zod";
+import { userRoleEnum } from "./profiles.schema.js";
+import { relations } from "drizzle-orm";
+import { agents } from "./agents.schema.js";
+import { visits } from "./visits.schema.js";
+import { diagnostics } from "./diagnostics.schema.js";
 
 
 export const farmers = pgTable("farmers", {
@@ -27,4 +29,15 @@ export const farmers = pgTable("farmers", {
     deactivatedAt: timestamp("deactivated_at", { withTimezone: true }),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    
 });
+
+export const farmersRelations = relations(farmers, ({ one, many }) => ({
+    agent: one(agents, {
+        fields: [farmers.agentId],
+        references: [agents.id],
+    }),
+    visits: many(visits),
+    diagnostics: many(diagnostics),
+}));

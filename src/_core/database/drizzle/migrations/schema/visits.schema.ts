@@ -4,8 +4,8 @@ import {
     text, 
     timestamp, 
 } from "drizzle-orm/pg-core";
-import { agents } from "./agents.js";
-import { farmers } from "./farmers.js";
+import { farmers } from "./farmers.schema.js";
+import { agents } from "./agents.schema.js";
 
 export const visits = pgTable("visits", {
     id: uuid("id").defaultRandom().primaryKey(),

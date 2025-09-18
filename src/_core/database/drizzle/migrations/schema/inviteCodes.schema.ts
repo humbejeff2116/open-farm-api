@@ -7,7 +7,8 @@ import {
     boolean,
     pgEnum  
 } from "drizzle-orm/pg-core";
-import { userRoleEnum } from "./users.js";
+import { userRoleEnum } from "./profiles.schema.js";
+
 
 
 export const statusEnum = pgEnum("invite_code_status", ["active", "revoked", "expired"]);
