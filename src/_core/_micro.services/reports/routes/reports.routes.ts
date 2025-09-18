@@ -3,7 +3,7 @@ import { authMiddleware, requireRole } from "../../../middlewares/auth/index.js"
 import reportShareController from "../controllers/report.share.controller.js";
 import reportAttachmentController from "../controllers/report.attachments.controller.js";
 import reportCommentsController from "../controllers/report.comments.controller.js";
-import reportReactionController from "../controllers/reports.reactions.controller.js";
+import reportReactionController from "../controllers/report.reactions.controller.js";
 import reportController from "../controllers/reports.controller.js";
 const router = Router();
 
