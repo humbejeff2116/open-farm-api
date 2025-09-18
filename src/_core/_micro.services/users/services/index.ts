@@ -1,15 +1,33 @@
-import { Types } from "mongoose";
-import accountSessionService from "./account-session/index.js";
-import type { Account } from "../types/index.js";
-import accountDbInterface from "../database/interface/index.js";
+import { injectable, inject, container, singleton } from 'tsyringe';
+import type { IUserService, UserDTO } from '../../../common/interfaces/user.interface.js';
+import type { IInviteService } from '../../../common/interfaces/invite.interface.js';
+import { eq, sql, desc, and, SQL } from "drizzle-orm";
+import { profiles } from '../../../database/drizzle/migrations/schema/profiles.schema.js';
+import { db } from '../../../database/index.database.js';
 
 
-const accountService = {
-    session: accountSessionService,
-    async signUp(account: Account) { 
+@singleton()
+@injectable()
+export class UserService implements IUserService {
+    constructor(@inject('IInviteService') private inviteService: IInviteService) {}
 
+    async createAccount(account: any) { 
+        console.log(`[User Service] Attempting to sign up user: ${account.email}`);
 
-        return await supabase.auth.signUp({
+        // Synchronous request to the invites service via the interface
+        const validateInviteCode = await this.inviteService.validateInviteCode(account.inviteCode);
+
+        if (!validateInviteCode) {
+            return ({
+                success: false,
+                reason: 'invalid invite code',
+                data: null
+            })
+        }
+
+        console.log(`[User Service] Invite validated. Creating user: ${account.email}`);
+
+        const signupUser =  await supabase.auth.signUp({
             email: account.email,
             password: account.password,
             options: {
@@ -20,116 +38,64 @@ const accountService = {
                 }
             }
         })
-        
 
-        // try {
-        //     const accountRes = await accountDbInterface.createAccount(account);
-        //     return ({
-        //         success: true,
-        //         error: false,
-        //         status: 200,
-        //         message: 'Account created successfully',
-        //         data: accountRes,
-        //     })
-        // } catch (err) {
-        //     console.error(err);
-        //     throw err;
-        // }
-    },
+        return ({
+            success: true,
+            reason: 'invalid invite code',
+            data: signupUser
+        })
+    }
+
+
+    public async getByInviteCode(inviteCode: string): Promise<any> {
+        console.log(`[User Service] Finding users for invite code: ${inviteCode}`);
+        
+        const rows = await db.select()
+        .from(profiles)
+        .where(eq(profiles.inviteCode, inviteCode))
+        .orderBy(desc(profiles.createdAt));
+
+        return rows;
+    }
 
     async getAccounts() {
-        try {
-            const users = await accountDbInterface.getAllAccounts();
-            return users;
-        } catch (err) {
-            console.error(err);
-            throw err;
-        }
-    },
+
+    }
 
     async getAccountByEmail(accountEmail: string) {
-        try {
-            const account = await accountDbInterface.getAccountByEmail(accountEmail);
-            return account;
-        } catch (err) {
-            console.error(err);
-            throw err;
-        }
-    },
 
-    async getAccountById(accountId: Types.ObjectId | string) {
-        try {
-            const account = await accountDbInterface.getAccountById(accountId);
-            return account;
-        } catch (err) {
-            console.error(err);
-            throw err;
-        }
-    },
+    }
+
+    async getUserAccount(accountId: string) {
+ 
+    }
 
     async updateAccountProfileImage(
-        accountId: Types.ObjectId | string, 
-        profileImage
+        accountId: string, 
+        profileImage: any
     ) {
-        try {
-            const accountResponse = await accountDbInterface.updateAccountProfileImage(accountId, profileImage);
-            return ({
-                ...accountResponse,
-                message: 'Account profile image updated',
-            })
-        } catch (err) {
-            console.error(err);
-            throw err;
-        }
-    },
+
+    }
 
     async updateAccountNotificationStatus(
-        accountId: Types.ObjectId | string, 
+        accountId: string, 
         hasActiveNotification: boolean
     ) {
-        try {
-            if (await accountDbInterface.accountHasActiveNotification(accountId)) {
-                return ({status: 201, error: false, message: "active notification already exist", data: null});
-            }
 
-            const accountResponse = await accountDbInterface.updateAccountNotificationStatus(accountId, hasActiveNotification);
-            return ({
-                ...accountResponse,
-                message: 'Notification status updated',
-            })
-        } catch (err) {
-            console.error(err);
-            throw err;
-        }
-    },
+    }
 
-    async getAccountPurchaseHistory(accountId: Types.ObjectId | string) {
-        try {
-            const accountResponse = await accountDbInterface.getAccountPurchaseHistory(accountId);
-            return accountResponse;
-        } catch (err) {
-            console.error(err);
-            throw err;
-        }
-    },
+    async getAccountPurchaseHistory(accountId: string) {
+       
+    }
 
-    async checkAccountPassword(password: string, account): Promise<{error: boolean, match: boolean}> {
-        return new Promise((res, rej) => {
-            account.checkPassword(password, function (err: Error, isMatch: boolean) {
-                if (err) {
-                    rej(err);
-                }
-                if (!isMatch) {
-                    res({error: false, match: false });
-                }
-                res({error: false, match: true });
-            })
-        })
-    },
+    async checkAccountPassword(password: string, account: any) {
+        
+    }
 
-    async AccountExist(id: string): Promise<boolean> {
-        return await this.getAccountById(id) ? true : false;
-    },
+    async AccountExist(id: string) {
+        // return await this.getAccountById(id) ? true : false;
+    }
 }
 
-export default accountService;
+// const userService = container.resolve(UserService);
+// export default userService;
