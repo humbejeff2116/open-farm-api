@@ -1,9 +1,15 @@
-import { Hono } from 'hono';
+import { Router } from 'express';
+import { authMiddleware, requireRole } from '../../../middlewares/auth/index.js';
+import userController from '../controllers/user.controller.js';
+
+const accountRouter = Router();
 
 
-const accountRouter = new Hono();
-
-accountRouter.post('/sign-up', accountController.create);
-accountRouter.post('/sign-in', accountController.create);
+accountRouter.post(
+    '/:id/signup-successfull/:invitesCode',
+    authMiddleware,  
+    requireRole(["farmer", "admin", "agent"]),
+    userController.userSignupSuccessfull
+);
 
 export default accountRouter;
