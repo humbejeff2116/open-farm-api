@@ -1,57 +1,28 @@
-import RabbitMQStreamReciever from "../../../../messageQueue/streams/reciever/index.js";
-
-export const accountMessageStreamTypes = {
-    accountCreated: 'account_created',
-    accountUpdated: 'account_updated'
-}
-
-interface Cache {
-    streamReciever: {
-        recieveMessage: (message: any) => void
-    } | null
-
-}
+import { messageStreamTypes } from "../../../common/types/messageQueue.types.js";
+import rabbitMQStreamReciever from "../../../messageQueue/streams/reciever/index.js";
 
 
-const cache: Cache = {
-    streamReciever: null
-}
-
-const rabbitAccountMQStreamReciever = (async (streamName: string) => {
-    if (cache.streamReciever) {
-        return ({
-            recieveMessage: cache.streamReciever.recieveMessage
-        }); 
-    } else {
-        const rabbitMQStream = new RabbitMQStreamReciever(streamName);
-        await rabbitMQStream.connect();
-        await rabbitMQStream.createStream();
-
-        // keep stream sender in the cache
-        cache.streamReciever = {
-            recieveMessage: rabbitMQStream.recieveMessage.bind(rabbitMQStream)
-        }
-
-        return ({
-            recieveMessage: rabbitMQStream.recieveMessage.bind(rabbitMQStream)
-        }); 
-    }
-})('account');
-
-
-export class AccountController {
-
-
-    async updateAccount() {
-        (await rabbitAccountMQStreamReciever).recieveMessage(
-            {
-                type:  accountMessageStreamTypes.accountCreated,
-                message: 'hello'
+async function recievedStreams() {
+    return rabbitMQStreamReciever().then(({recieveMessage}) => {
+         recieveMessage((message: any) => {
+            switch (message.type) {
+                case messageStreamTypes.inviteCodeValidated:
+                    break;
+                default:
+                    console.warn("Unknown message type:", message.type);
             }
-        )
-    }
-    
+        })
+    });
 }
 
 
-export default rabbitAccountMQStreamReciever;
+
+function start() {
+    recievedStreams().then(() => {
+        console.log("Account message stream reciever started");
+    }).catch((err) => {
+        console.error("Failed to start account message stream reciever", err);
+    });
+}
+
+start();
