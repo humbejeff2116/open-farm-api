@@ -1,8 +1,8 @@
 import { and, eq } from "drizzle-orm";
-import { reportFilterPresets } from "../../../../database/drizzle/migrations/schema/reports.js";
-import { db } from "../../../../database/index.js";
+import { reportFilterPresets } from "../../../database/drizzle/migrations/schema/reports.schema.js";
+import { db } from "../../../database/index.database.js";
 
-class Service {
+class ReportsFilterService {
 
 
     async savePreset(userId: string, name: string, filters: any) {
@@ -64,5 +64,5 @@ class Service {
     }
 }
 
-const reportsFilterService = new Service();
+const reportsFilterService = new ReportsFilterService();
 export default reportsFilterService;
