@@ -38,16 +38,24 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Run drizzle tables generation
+        env:
+          DATABASE_URL: postgres://test:test@localhost:5432/testdb
+        run: pnpm run db:generate
+
       - name: Run migrations
         env:
           DATABASE_URL: postgres://test:test@localhost:5432/testdb
-        run: pnpm drizzle-kit migrate
+        run: pnpm run db:push
+
+      - name: Run seed data
+        run: npx run db:seed
 
       - name: Run tests with coverage
         env:
           DATABASE_URL: postgres://test:test@localhost:5432/testdb
           SUPABASE_JWT_SECRET: test-secret
-        run: pnpm vitest run --coverage
+        run: pnpm run test:vit
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
