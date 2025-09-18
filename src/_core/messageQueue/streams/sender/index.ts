@@ -1,6 +1,7 @@
 import rabbit from "rabbitmq-stream-js-client";
+import type { MessageQueueCache } from "../reciever/index.js";
 
-export default class RabbitMQStreamSender {
+class RabbitMQStreamSender {
 
     #streamName: string | null = null;
     #client: any = null;
@@ -12,14 +13,24 @@ export default class RabbitMQStreamSender {
 
     async connect() {
         console.log("Connecting...");
-        const client = await rabbit.connect({
-            vhost: "/",
-            port: 5552,
-            hostname: "localhost",
-            username: "guest",
-            password: "guest",
-        });
+        if (
+            !process.env.RABBIT_MESSAGE_QUEUE_VHOST ||
+            !process.env.RABBIT_MESSAGE_QUEUE_PORT ||
+            !process.env.RABBIT_MESSAGE_QUEUE_HOSTNAME ||
+            !process.env.RABBIT_MESSAGE_QUEUE_USERNAME ||
+            !process.env.RABBIT_MESSAGE_QUEUE_PASSWORD
+        ) {
+            throw new Error('RabbitMQ .env vairables not provided');
+        }
 
+        // TODO... only connect if client is not already connected
+        const client = await rabbit.connect({
+            vhost: process.env.RABBIT_MESSAGE_QUEUE_VHOST,
+            port:  Number(process.env.RABBIT_MESSAGE_QUEUE_PORT),
+            hostname: process.env.RABBIT_MESSAGE_QUEUE_HOSTNAME,
+            username: process.env.RABBIT_MESSAGE_QUEUE_USERNAME,
+            password: process.env.RABBIT_MESSAGE_QUEUE_PASSWORD,
+        });
         this.#client = client;
         // return this;
     }
@@ -46,3 +57,34 @@ export default class RabbitMQStreamSender {
         await this.#client.close();
     }
 }
+
+
+const cache: MessageQueueCache = {
+    streamSender: {}
+}
+
+const rabbitMQStreamSender = async (streamName?: 'account' | 'reports' | 'fitFarm') => {
+    streamName = streamName || 'fitFarm';
+    
+    if (cache?.streamSender && cache?.streamSender[streamName]) {
+        return ({
+            sendMessage: cache.streamSender[streamName].sendMessage
+        });  
+    } else {
+        const streamSender = new RabbitMQStreamSender(streamName);
+
+        await streamSender.connect();
+        await streamSender.createStream();
+
+        // keep stream sender in the cache
+        if (cache?.streamSender) cache.streamSender[streamName] = {
+            sendMessage: streamSender.sendMessage
+        }
+
+        return ({
+            sendMessage: streamSender.sendMessage
+        });
+    }
+}
+
+export default rabbitMQStreamSender;

@@ -1,7 +1,6 @@
 import rabbit from "rabbitmq-stream-js-client";
 
-export default class RabbitMQStreamReciever {
-
+class RabbitMQStreamReciever {
     #streamName: string | null = null;
     #client: any = null;
 
@@ -11,12 +10,24 @@ export default class RabbitMQStreamReciever {
 
     async connect() {
         console.log("Connecting...");
+
+        if (
+            !process.env.RABBIT_MESSAGE_QUEUE_VHOST ||
+            !process.env.RABBIT_MESSAGE_QUEUE_PORT ||
+            !process.env.RABBIT_MESSAGE_QUEUE_HOSTNAME ||
+            !process.env.RABBIT_MESSAGE_QUEUE_USERNAME ||
+            !process.env.RABBIT_MESSAGE_QUEUE_PASSWORD
+        ) {
+            throw new Error('RabbitMQ .env vairables not provided');
+        }
+
+        // TODO... only connect if client is not already connected
         const client = await rabbit.connect({
-            vhost: "/",
-            port: 5552,
-            hostname: "localhost",
-            username: "guest",
-            password: "guest",
+            vhost: process.env.RABBIT_MESSAGE_QUEUE_VHOST,
+            port:  Number(process.env.RABBIT_MESSAGE_QUEUE_PORT),
+            hostname: process.env.RABBIT_MESSAGE_QUEUE_HOSTNAME,
+            username: process.env.RABBIT_MESSAGE_QUEUE_USERNAME,
+            password: process.env.RABBIT_MESSAGE_QUEUE_PASSWORD,
         });
 
         this.#client = client;
@@ -38,3 +49,49 @@ export default class RabbitMQStreamReciever {
         console.log(`Received message ${message.content.toString()}`)
     }
 }
+
+
+let streamNameModule: string;
+export interface MessageQueueCache {
+    streamSender?: {
+        [streamNameModule]: {
+            sendMessage: (message: any) => Promise<void>
+        }
+    }
+    streamReciever?: {
+        [streamNameModule]: {
+            recieveMessage: (message: any) => void
+        }
+    }
+}
+
+const cache: MessageQueueCache = {
+    streamReciever: {},
+}
+
+const rabbitMQStreamReciever = async (streamName?: 'account' | 'reports' | 'fitFarm') => {
+    streamName = streamName || 'fitFarm';
+
+    if (cache?.streamReciever && cache?.streamReciever[streamName]) {
+        return ({
+            recieveMessage: cache.streamReciever[streamName].recieveMessage
+        }); 
+    } else {
+        const rabbitMQStream: RabbitMQStreamReciever = new RabbitMQStreamReciever(streamName);
+        await rabbitMQStream.connect();
+        await rabbitMQStream.createStream();
+
+        // keep stream sender in the cache
+        // streamNameModule = streamName;
+        if (cache?.streamReciever) cache.streamReciever[streamName] = {
+            recieveMessage: rabbitMQStream.recieveMessage.bind(rabbitMQStream) 
+        }
+
+        return ({
+            recieveMessage: rabbitMQStream.recieveMessage.bind(rabbitMQStream)
+        }); 
+    }
+}
+
+
+export default rabbitMQStreamReciever;
