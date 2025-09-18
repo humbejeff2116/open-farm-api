@@ -8,18 +8,20 @@
     "types": [
       "node"
     ],
-    "outDir": "./dist"
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
    "include": ["./**/*"],
   "exclude": [
     "node_modules", 
     "./src/_marketplace/*", 
     "./src/_core/tests/*",
-    "./src/_core/_micro.services/account/*",
     "./src/_core/_micro.services/transaction/*",
     "./src/_core/_micro.services/notification/*",
     "./src/_core/_micro.services/payment/*",
     "./src/_core/_micro.services/shipping/*",
-    "./src/_core/_micro.services/wallet/*",
   ]
 }
