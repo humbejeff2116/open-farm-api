@@ -1,9 +1,8 @@
 import { sql } from "drizzle-orm";
-import { db } from "../../../../database/index.js";
-import { reports } from "../../../../database/drizzle/migrations/schema/reports.js";
+import { db } from "../../../database/index.database.js";
+import { reports } from "../../../database/drizzle/migrations/schema/reports.schema.js";
 
-
-class Service {
+class ReportsAnalyticsService {
     async getReportAnalytics() {
         const byType = await db.select({ 
             type: reports.type, 
@@ -32,5 +31,5 @@ class Service {
 }
 
 
-const reportAnalyticsService = new Service();
+const reportAnalyticsService = new ReportsAnalyticsService();
 export default reportAnalyticsService;
