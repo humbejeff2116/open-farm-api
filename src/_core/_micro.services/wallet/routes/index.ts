@@ -1,9 +1,11 @@
-import { Hono } from 'hono';
+import { Router } from 'express';
+import walletController from '../controllers/wallet.controller.js';
 
+const walletRouter = Router();
 
-const walletRouter = new Hono();
+walletRouter.get('/:id', 
+    walletController.getWallet
+);
 
-walletRouter.post('/sign-up', walletController.create);
-walletRouter.post('/sign-in', walletController.create);
 
 export default walletRouter;
